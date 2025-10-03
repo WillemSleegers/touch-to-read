@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Settings, RotateCcw, Keyboard } from "lucide-react"
+import { Settings, RotateCcw, Keyboard, Rewind, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -29,6 +29,8 @@ export function RSVPReader() {
   const [fontSize, setFontSize] = useState(60)
   const [showORP, setShowORP] = useState(true)
   const [usePunctuation, setUsePunctuation] = useState(true)
+  const [useAnimation, setUseAnimation] = useState(true)
+  const [showProgress, setShowProgress] = useState(true)
   const [words, setWords] = useState<ProcessedWord[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isReading, setIsReading] = useState(false)
@@ -36,8 +38,11 @@ export function RSVPReader() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const rewindIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const baseDelay = 60000 / wpm
+  // Animation should be fast enough to not interfere with reading (max 25% of base delay)
+  const animationDuration = Math.min(150, Math.floor(baseDelay * 0.25))
 
   // Process text with intelligent delays based on punctuation and word length
   const processText = useCallback((text: string) => {
@@ -94,6 +99,12 @@ export function RSVPReader() {
       setFontSize(settings.fontSize)
       setShowORP(settings.showORP)
       setUsePunctuation(settings.usePunctuation)
+      if (settings.useAnimation !== undefined) {
+        setUseAnimation(settings.useAnimation)
+      }
+      if (settings.showProgress !== undefined) {
+        setShowProgress(settings.showProgress)
+      }
     }
 
     const savedText = loadCurrentText()
@@ -107,12 +118,13 @@ export function RSVPReader() {
       const defaultText = `Welcome to Touch to Read! This is an RSVP speed reading app. Touch and hold anywhere on the screen to start reading. Release to pause. The longer you hold, the more you read. It's that simple. Try adjusting the speed in settings to find your perfect pace. Happy reading!`
       handleTextSubmit(defaultText)
     }
-  }, [handleTextSubmit])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Save settings when they change
   useEffect(() => {
-    saveSettings({ wpm, fontSize, showORP, usePunctuation })
-  }, [wpm, fontSize, showORP, usePunctuation])
+    saveSettings({ wpm, fontSize, showORP, usePunctuation, useAnimation, showProgress })
+  }, [wpm, fontSize, showORP, usePunctuation, useAnimation, showProgress])
 
   // Save reading progress periodically
   useEffect(() => {
@@ -185,29 +197,91 @@ export function RSVPReader() {
     setIsReading(false)
   }
 
-  const toggleReading = () => {
-    if (hasText && currentIndex < words.length) {
-      setIsReading(prev => !prev)
+  const handleRewindStart = () => {
+    // Rewind one word immediately
+    setCurrentIndex(prev => Math.max(0, prev - 1))
+
+    // Then continue rewinding while held
+    rewindIntervalRef.current = setInterval(() => {
+      setCurrentIndex(prev => {
+        if (prev <= 0) {
+          if (rewindIntervalRef.current) {
+            clearInterval(rewindIntervalRef.current)
+            rewindIntervalRef.current = null
+          }
+          return 0
+        }
+        return prev - 1
+      })
+    }, 100) // Rewind speed: 10 words per second
+  }
+
+  const handleRewindStop = () => {
+    if (rewindIntervalRef.current) {
+      clearInterval(rewindIntervalRef.current)
+      rewindIntervalRef.current = null
     }
   }
 
+  const handleClearText = () => {
+    setWords([])
+    setCurrentIndex(0)
+    setIsReading(false)
+    setHasText(false)
+  }
+
+  const handleSpaceDown = () => {
+    // Don't start reading if any dialog is open
+    if (settingsOpen || showKeyboardHelp) return
+
+    if (hasText && currentIndex < words.length) {
+      setIsReading(true)
+    }
+  }
+
+  const handleSpaceUp = () => {
+    setIsReading(false)
+  }
+
   const skipBackward = () => {
+    // Don't skip if any dialog is open
+    if (settingsOpen || showKeyboardHelp) return
     setCurrentIndex(prev => Math.max(0, prev - 1))
   }
 
   const skipForward = () => {
+    // Don't skip if any dialog is open
+    if (settingsOpen || showKeyboardHelp) return
     setCurrentIndex(prev => Math.min(words.length - 1, prev + 1))
+  }
+
+  const handleRestartWrapper = () => {
+    // Don't restart if any dialog is open
+    if (settingsOpen || showKeyboardHelp) return
+    handleRestart()
+  }
+
+  const handleEscapeWrapper = () => {
+    // If a dialog is open, close it; otherwise stop reading
+    if (settingsOpen) {
+      setSettingsOpen(false)
+    } else if (showKeyboardHelp) {
+      setShowKeyboardHelp(false)
+    } else {
+      setIsReading(false)
+    }
   }
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    onSpace: toggleReading,
+    onSpaceDown: handleSpaceDown,
+    onSpaceUp: handleSpaceUp,
     onLeft: skipBackward,
     onRight: skipForward,
-    onRestart: handleRestart,
+    onRestart: handleRestartWrapper,
     onSettings: () => setSettingsOpen(true),
     onKeyboard: () => setShowKeyboardHelp(true),
-    onEscape: () => setIsReading(false),
+    onEscape: handleEscapeWrapper,
   })
 
   const currentWord = words[currentIndex]?.text || ""
@@ -256,7 +330,7 @@ export function RSVPReader() {
             </DialogHeader>
             <div className="space-y-3 py-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Play / Pause</span>
+                <span className="text-sm">Hold to read</span>
                 <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">Space</kbd>
               </div>
               <div className="flex justify-between items-center">
@@ -354,6 +428,28 @@ export function RSVPReader() {
                   onCheckedChange={setUsePunctuation}
                 />
               </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="animation" className="cursor-pointer">
+                  Word Transition Animation
+                </Label>
+                <Switch
+                  id="animation"
+                  checked={useAnimation}
+                  onCheckedChange={setUseAnimation}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="progress" className="cursor-pointer">
+                  Show Progress Bar
+                </Label>
+                <Switch
+                  id="progress"
+                  checked={showProgress}
+                  onCheckedChange={setShowProgress}
+                />
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -361,7 +457,13 @@ export function RSVPReader() {
       </div>
 
       {/* Main reading area */}
-      <div className="flex-1 flex items-center justify-center">
+      <div
+        className="flex-1 flex items-center justify-center cursor-pointer select-none"
+        onPointerDown={hasText && !isFinished ? handlePointerDown : undefined}
+        onPointerUp={hasText && !isFinished ? handlePointerUp : undefined}
+        onPointerLeave={hasText && !isFinished ? handlePointerLeave : undefined}
+        onContextMenu={(e) => hasText && e.preventDefault()}
+      >
         {!hasText ? (
           <div className="text-center space-y-6">
             <h1 className="text-4xl font-bold">Touch to Read</h1>
@@ -371,62 +473,74 @@ export function RSVPReader() {
             <TextInputDialog onTextSubmit={handleTextSubmit} />
           </div>
         ) : (
-          <div className="w-full">
-            <div
-              className="flex-1 flex items-center justify-center cursor-pointer select-none min-h-[400px]"
-              onPointerDown={handlePointerDown}
-              onPointerUp={handlePointerUp}
-              onPointerLeave={handlePointerLeave}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <div className="text-center space-y-8 w-full px-4">
-                <div className="min-h-[120px] flex items-center justify-center">
-                  <p
-                    className="font-bold tracking-tight transition-all duration-150 animate-in fade-in zoom-in-50"
-                    style={{ fontSize: `${fontSize}px` }}
-                    key={currentIndex}
-                  >
-                    {renderWordWithORP()}
-                  </p>
-                </div>
+          <div className="w-full h-full flex flex-col justify-center">
+            <div className="text-center w-full px-4">
+              {/* Main word display */}
+              <div className="min-h-[120px] flex items-center justify-center">
+                <p
+                  className={`font-bold tracking-tight ${useAnimation ? 'animate-in fade-in zoom-in-50' : ''}`}
+                  style={{
+                    fontSize: `${fontSize}px`,
+                    animationDuration: useAnimation ? `${animationDuration}ms` : undefined
+                  }}
+                  key={currentIndex}
+                >
+                  {renderWordWithORP()}
+                </p>
+              </div>
 
-                {isFinished ? (
-                  <div className="space-y-4">
-                    <p className="text-lg text-muted-foreground">
-                      Finished! 🎉
-                    </p>
-                    <div className="flex gap-2 justify-center">
-                      <Button onClick={handleRestart} variant="outline">
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Restart
-                      </Button>
-                      <TextInputDialog onTextSubmit={handleTextSubmit} />
-                    </div>
+              {/* Instruction text */}
+              <div className="h-6 mt-2">
+                {!isReading && (
+                  <p className="text-muted-foreground">
+                    {isFinished ? "Finished!" : "Touch and hold to read"}
+                  </p>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              {showProgress && (
+                <div className="space-y-2 mt-8">
+                  <div className="text-sm text-muted-foreground">
+                    {currentIndex + 1} / {words.length} ({progress}%)
                   </div>
-                ) : (
-                  <>
-                    <p className="text-muted-foreground">
-                      {isReading ? "Release to pause" : "Touch and hold to read"}
-                    </p>
-                    <div className="space-y-2">
-                      <div className="text-sm text-muted-foreground">
-                        {currentIndex + 1} / {words.length} ({progress}%)
-                      </div>
-                      <div className="max-w-md mx-auto h-2 bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary transition-all duration-200"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 justify-center pt-4">
-                      <Button onClick={handleRestart} variant="outline" size="sm">
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Restart
-                      </Button>
-                      <TextInputDialog onTextSubmit={handleTextSubmit} />
-                    </div>
-                  </>
+                  <div className="max-w-md mx-auto h-2 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-200"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom controls - Rewind, Restart, and Clear */}
+              <div className="h-10 flex items-center justify-center mt-8">
+                {!isReading && (
+                  <div
+                    className="flex gap-2 justify-center"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerUp={(e) => e.stopPropagation()}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={currentIndex === 0}
+                      onPointerDown={handleRewindStart}
+                      onPointerUp={handleRewindStop}
+                      onPointerLeave={handleRewindStop}
+                    >
+                      <Rewind className="h-5 w-5" />
+                      <span className="sr-only">Rewind</span>
+                    </Button>
+                    <Button onClick={handleRestart} variant="ghost" size="icon" disabled={currentIndex === 0}>
+                      <RotateCcw className="h-5 w-5" />
+                      <span className="sr-only">Restart</span>
+                    </Button>
+                    <Button onClick={handleClearText} variant="ghost" size="icon">
+                      <X className="h-5 w-5" />
+                      <span className="sr-only">Clear text</span>
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

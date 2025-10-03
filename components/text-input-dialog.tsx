@@ -37,15 +37,18 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"paste" | "file" | "url" | "sample">("paste")
   const [text, setText] = useState("")
+  const [selectedSample, setSelectedSample] = useState<string>("")
   const [url, setUrl] = useState("")
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractError, setExtractError] = useState("")
 
   const handleSubmit = () => {
-    if (text.trim()) {
-      onTextSubmit(text.trim())
+    const finalText = activeTab === "sample" && selectedSample ? selectedSample : text
+    if (finalText.trim()) {
+      onTextSubmit(finalText.trim())
       setOpen(false)
       setText("")
+      setSelectedSample("")
     }
   }
 
@@ -62,7 +65,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
   }
 
   const handleSampleSelect = (sampleText: string) => {
-    setText(sampleText)
+    setSelectedSample(sampleText)
   }
 
   const handleUrlExtract = async () => {
@@ -111,7 +114,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
 
         <div className="space-y-4">
           {/* Tabs */}
-          <div className="flex gap-2 border-b">
+          <div className="flex gap-2 border-b pb-2">
             <Button
               variant={activeTab === "paste" ? "secondary" : "ghost"}
               size="sm"
@@ -151,7 +154,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
           </div>
 
           {/* Content */}
-          <div className="space-y-4">
+          <div className="space-y-4 min-h-[400px]">
             {activeTab === "paste" && (
               <div className="space-y-2">
                 <Label htmlFor="text-input">Paste your text here</Label>
@@ -267,7 +270,11 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                     <button
                       key={index}
                       onClick={() => handleSampleSelect(sample.text)}
-                      className="w-full text-left p-3 rounded-md border hover:bg-secondary/50 transition-colors"
+                      className={`w-full text-left p-3 rounded-md border transition-colors ${
+                        selectedSample === sample.text
+                          ? 'bg-secondary border-primary'
+                          : 'hover:bg-secondary/50'
+                      }`}
                     >
                       <div className="font-semibold">{sample.title}</div>
                       <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
@@ -279,17 +286,6 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                     </button>
                   ))}
                 </div>
-                {text && (
-                  <div className="space-y-2">
-                    <Label>Selected text</Label>
-                    <Textarea
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      rows={6}
-                      className="resize-none"
-                    />
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -299,7 +295,10 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={!text.trim()}>
+            <Button
+              onClick={handleSubmit}
+              disabled={activeTab === "sample" ? !selectedSample : !text.trim()}
+            >
               Start Reading
             </Button>
           </div>

@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 
 export interface KeyboardShortcuts {
-  onSpace?: () => void
+  onSpaceDown?: () => void
+  onSpaceUp?: () => void
   onLeft?: () => void
   onRight?: () => void
   onRestart?: () => void
@@ -21,10 +22,16 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
         return
       }
 
+      // Prevent key repeat for space bar
+      if (e.key === ' ' && e.repeat) {
+        e.preventDefault()
+        return
+      }
+
       switch (e.key) {
         case ' ':
           e.preventDefault()
-          shortcuts.onSpace?.()
+          shortcuts.onSpaceDown?.()
           break
         case 'ArrowLeft':
           e.preventDefault()
@@ -56,7 +63,26 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
       }
     }
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return
+      }
+
+      if (e.key === ' ') {
+        e.preventDefault()
+        shortcuts.onSpaceUp?.()
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
   }, [shortcuts])
 }

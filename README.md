@@ -24,7 +24,7 @@ A modern RSVP (Rapid Serial Visual Presentation) speed reading app built with Ne
 - **Sample Texts**: Pre-loaded articles for instant reading
 
 ### Keyboard Shortcuts
-- `Space` - Play/Pause reading
+- `Space` - Hold to read (release to pause)
 - `←` - Previous word
 - `→` - Next word
 - `R` - Restart from beginning
@@ -45,6 +45,29 @@ RSVP (Rapid Serial Visual Presentation) is a speed reading technique that displa
 - Subvocalization (inner voice)
 
 By removing these barriers, most people can read 2-3x faster while maintaining comprehension.
+
+## 💡 Design Philosophy: Active Engagement
+
+Touch to Read is built around the principle that **reading requires active engagement**. Unlike traditional speed readers that auto-play text, this app uses a **hold-to-read** interaction model:
+
+### Why Hold-to-Read?
+
+**Prevents Distraction**: In auto-play readers, text continues even when your mind wanders. With hold-to-read, the text stops the moment you lose focus—you can't accidentally continue reading without comprehending.
+
+**Active Participation**: By requiring continuous input (holding the screen, mouse, or spacebar), the app ensures you're actively engaged with the content. Reading becomes a conscious, deliberate activity.
+
+**Natural Pause Points**: When you need to think about what you just read, simply release. No need to find a pause button or stop control—the text instantly stops.
+
+**Consistent Across All Inputs**: Whether you're using:
+- **Touch**: Hold anywhere on the screen
+- **Mouse**: Click and hold anywhere
+- **Keyboard**: Hold the spacebar
+
+The interaction is always the same: active holding = active reading.
+
+### The Result
+
+This design creates a direct link between your engagement and the reading experience. When you're focused, the text flows. When your attention drifts, the text stops. It's a simple but powerful way to maintain comprehension at higher reading speeds.
 
 ## 🛠️ Technology Stack
 

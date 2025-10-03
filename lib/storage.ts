@@ -5,6 +5,8 @@ export interface ReadingSettings {
   fontSize: number
   showORP: boolean
   usePunctuation: boolean
+  useAnimation: boolean
+  showProgress: boolean
 }
 
 export interface SavedText {
