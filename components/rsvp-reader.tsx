@@ -377,8 +377,9 @@ export function RSVPReader() {
               <div className="text-center space-y-8 w-full px-4">
                 <div className="min-h-[120px] flex items-center justify-center">
                   <p
-                    className="font-bold tracking-tight transition-opacity duration-100"
+                    className="font-bold tracking-tight transition-all duration-150 animate-in fade-in zoom-in-50"
                     style={{ fontSize: `${fontSize}px` }}
+                    key={currentIndex}
                   >
                     {renderWordWithORP()}
                   </p>

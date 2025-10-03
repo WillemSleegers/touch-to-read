@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { FileText, Type } from "lucide-react"
+import { FileText, Type, Link as LinkIcon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -35,8 +35,11 @@ const SAMPLE_TEXTS = [
 
 export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
   const [open, setOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<"paste" | "file" | "sample">("paste")
+  const [activeTab, setActiveTab] = useState<"paste" | "file" | "url" | "sample">("paste")
   const [text, setText] = useState("")
+  const [url, setUrl] = useState("")
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [extractError, setExtractError] = useState("")
 
   const handleSubmit = () => {
     if (text.trim()) {
@@ -60,6 +63,35 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
 
   const handleSampleSelect = (sampleText: string) => {
     setText(sampleText)
+  }
+
+  const handleUrlExtract = async () => {
+    if (!url.trim()) return
+
+    setIsExtracting(true)
+    setExtractError("")
+
+    try {
+      const response = await fetch('/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setExtractError(data.error || 'Failed to extract text')
+        return
+      }
+
+      setText(data.content)
+      setExtractError("")
+    } catch {
+      setExtractError('Network error. Please check your connection.')
+    } finally {
+      setIsExtracting(false)
+    }
   }
 
   return (
@@ -99,6 +131,15 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
               File
             </Button>
             <Button
+              variant={activeTab === "url" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("url")}
+              className="gap-2"
+            >
+              <LinkIcon className="h-4 w-4" />
+              URL
+            </Button>
+            <Button
               variant={activeTab === "sample" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setActiveTab("sample")}
@@ -125,6 +166,58 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                 <p className="text-sm text-muted-foreground">
                   {text.split(/\s+/).filter(w => w.length > 0).length} words
                 </p>
+              </div>
+            )}
+
+            {activeTab === "url" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="url-input">Enter article URL</Label>
+                  <div className="flex gap-2">
+                    <input
+                      id="url-input"
+                      type="url"
+                      placeholder="https://example.com/article"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                      disabled={isExtracting}
+                    />
+                    <Button
+                      onClick={handleUrlExtract}
+                      disabled={!url.trim() || isExtracting}
+                    >
+                      {isExtracting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Extracting...
+                        </>
+                      ) : (
+                        'Extract'
+                      )}
+                    </Button>
+                  </div>
+                  {extractError && (
+                    <p className="text-sm text-destructive">{extractError}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Paste a URL to automatically extract readable text
+                  </p>
+                </div>
+                {text && (
+                  <div className="space-y-2">
+                    <Label>Extracted text</Label>
+                    <Textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      rows={8}
+                      className="resize-none"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      {text.split(/\s+/).filter(w => w.length > 0).length} words
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

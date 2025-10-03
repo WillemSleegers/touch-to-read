@@ -20,8 +20,8 @@ A modern RSVP (Rapid Serial Visual Presentation) speed reading app built with Ne
 ### Text Input Options
 - **Paste Text**: Simple textarea for copying and pasting
 - **File Upload**: Upload .txt and .md files
+- **URL Extraction**: Automatically extract readable text from web articles
 - **Sample Texts**: Pre-loaded articles for instant reading
-- **Future**: URL extraction (coming soon)
 
 ### Keyboard Shortcuts
 - `Space` - Play/Pause reading
