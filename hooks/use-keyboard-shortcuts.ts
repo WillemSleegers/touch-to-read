@@ -6,6 +6,7 @@ export interface KeyboardShortcuts {
   onRight?: () => void
   onRestart?: () => void
   onSettings?: () => void
+  onKeyboard?: () => void
   onEscape?: () => void
 }
 
@@ -42,6 +43,11 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
         case 'S':
           e.preventDefault()
           shortcuts.onSettings?.()
+          break
+        case 'k':
+        case 'K':
+          e.preventDefault()
+          shortcuts.onKeyboard?.()
           break
         case 'Escape':
           e.preventDefault()

@@ -206,6 +206,7 @@ export function RSVPReader() {
     onRight: skipForward,
     onRestart: handleRestart,
     onSettings: () => setSettingsOpen(true),
+    onKeyboard: () => setShowKeyboardHelp(true),
     onEscape: () => setIsReading(false),
   })
 
@@ -236,7 +237,7 @@ export function RSVPReader() {
   const isFinished = currentIndex >= words.length - 1 && words.length > 0
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
       {/* Header */}
       <div className="fixed top-0 right-0 p-4 flex gap-2 z-10">
         <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
@@ -273,6 +274,10 @@ export function RSVPReader() {
               <div className="flex justify-between items-center">
                 <span className="text-sm">Open settings</span>
                 <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">S</kbd>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Keyboard shortcuts help</span>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">K</kbd>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Stop reading</span>
@@ -428,6 +433,15 @@ export function RSVPReader() {
           </div>
         )}
       </div>
+
+      {/* Footer - only show when not reading */}
+      {!isReading && hasText && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 text-center">
+          <p className="text-xs text-muted-foreground">
+            Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-xs font-mono">K</kbd> for keyboard shortcuts
+          </p>
+        </div>
+      )}
     </div>
   )
 }

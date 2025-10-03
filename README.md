@@ -29,6 +29,7 @@ A modern RSVP (Rapid Serial Visual Presentation) speed reading app built with Ne
 - `→` - Next word
 - `R` - Restart from beginning
 - `S` - Open settings
+- `K` - Keyboard shortcuts help
 - `Esc` - Stop reading
 
 ### Persistence
