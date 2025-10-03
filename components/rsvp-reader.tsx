@@ -17,7 +17,12 @@ import { Switch } from "@/components/ui/switch"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { TextInputDialog } from "@/components/text-input-dialog"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
-import { loadSettings, saveSettings, loadCurrentText, saveCurrentText } from "@/lib/storage"
+import {
+  loadSettings,
+  saveSettings,
+  loadCurrentText,
+  saveCurrentText,
+} from "@/lib/storage"
 
 interface ProcessedWord {
   text: string
@@ -45,51 +50,55 @@ export function RSVPReader() {
   const animationDuration = Math.min(150, Math.floor(baseDelay * 0.25))
 
   // Process text with intelligent delays based on punctuation and word length
-  const processText = useCallback((text: string) => {
-    const rawWords = text
-      .split(/\s+/)
-      .filter(word => word.length > 0)
+  const processText = useCallback(
+    (text: string) => {
+      const rawWords = text.split(/\s+/).filter((word) => word.length > 0)
 
-    const processed: ProcessedWord[] = rawWords.map((word) => {
-      let delay = baseDelay
+      const processed: ProcessedWord[] = rawWords.map((word) => {
+        let delay = baseDelay
 
-      if (usePunctuation) {
-        // Add delay for punctuation
-        if (word.match(/[.!?]$/)) {
-          delay *= 2.5 // Longer pause for sentence endings
-        } else if (word.match(/[,;:]$/)) {
-          delay *= 1.5 // Medium pause for commas and semicolons
+        if (usePunctuation) {
+          // Add delay for punctuation
+          if (word.match(/[.!?]$/)) {
+            delay *= 2.5 // Longer pause for sentence endings
+          } else if (word.match(/[,;:]$/)) {
+            delay *= 1.5 // Medium pause for commas and semicolons
+          }
+
+          // Adjust for word length (longer words need more time)
+          if (word.length > 8) {
+            delay *= 1.3
+          } else if (word.length > 12) {
+            delay *= 1.5
+          }
+
+          // Short words can be faster
+          if (word.length <= 3) {
+            delay *= 0.8
+          }
         }
 
-        // Adjust for word length (longer words need more time)
-        if (word.length > 8) {
-          delay *= 1.3
-        } else if (word.length > 12) {
-          delay *= 1.5
+        return {
+          text: word,
+          delay: Math.round(delay),
         }
+      })
 
-        // Short words can be faster
-        if (word.length <= 3) {
-          delay *= 0.8
-        }
-      }
+      return processed
+    },
+    [baseDelay, usePunctuation]
+  )
 
-      return {
-        text: word,
-        delay: Math.round(delay)
-      }
-    })
-
-    return processed
-  }, [baseDelay, usePunctuation])
-
-  const handleTextSubmit = useCallback((text: string) => {
-    const processed = processText(text)
-    setWords(processed)
-    setCurrentIndex(0)
-    setIsReading(false)
-    setHasText(true)
-  }, [processText])
+  const handleTextSubmit = useCallback(
+    (text: string) => {
+      const processed = processText(text)
+      setWords(processed)
+      setCurrentIndex(0)
+      setIsReading(false)
+      setHasText(true)
+    },
+    [processText]
+  )
 
   // Load saved settings and text on mount
   useEffect(() => {
@@ -112,7 +121,11 @@ export function RSVPReader() {
       handleTextSubmit(savedText.content)
       // Note: Progress will be restored after words are processed
       setTimeout(() => {
-        setCurrentIndex(Math.round((savedText.progress / 100) * savedText.content.split(/\s+/).length))
+        setCurrentIndex(
+          Math.round(
+            (savedText.progress / 100) * savedText.content.split(/\s+/).length
+          )
+        )
       }, 0)
     } else {
       const defaultText = `Welcome to Touch to Read! This is an RSVP speed reading app. Touch and hold anywhere on the screen to start reading. Release to pause. The longer you hold, the more you read. It's that simple. Try adjusting the speed in settings to find your perfect pace. Happy reading!`
@@ -123,20 +136,27 @@ export function RSVPReader() {
 
   // Save settings when they change
   useEffect(() => {
-    saveSettings({ wpm, fontSize, showORP, usePunctuation, useAnimation, showProgress })
+    saveSettings({
+      wpm,
+      fontSize,
+      showORP,
+      usePunctuation,
+      useAnimation,
+      showProgress,
+    })
   }, [wpm, fontSize, showORP, usePunctuation, useAnimation, showProgress])
 
   // Save reading progress periodically
   useEffect(() => {
     if (hasText && words.length > 0) {
       const progress = (currentIndex / words.length) * 100
-      const text = words.map(w => w.text).join(' ')
+      const text = words.map((w) => w.text).join(" ")
       saveCurrentText({
-        id: 'current',
+        id: "current",
         content: text,
         createdAt: Date.now(),
         lastReadAt: Date.now(),
-        progress
+        progress,
       })
     }
   }, [currentIndex, words, hasText])
@@ -146,7 +166,7 @@ export function RSVPReader() {
     if (isReading && currentIndex < words.length) {
       const currentWord = words[currentIndex]
       intervalRef.current = setTimeout(() => {
-        setCurrentIndex(prev => {
+        setCurrentIndex((prev) => {
           if (prev >= words.length - 1) {
             setIsReading(false)
             return prev
@@ -171,7 +191,7 @@ export function RSVPReader() {
   // Update words when settings change
   useEffect(() => {
     if (words.length > 0) {
-      const rawText = words.map(w => w.text).join(' ')
+      const rawText = words.map((w) => w.text).join(" ")
       const processed = processText(rawText)
       setWords(processed)
     }
@@ -199,11 +219,11 @@ export function RSVPReader() {
 
   const handleRewindStart = () => {
     // Rewind one word immediately
-    setCurrentIndex(prev => Math.max(0, prev - 1))
+    setCurrentIndex((prev) => Math.max(0, prev - 1))
 
     // Then continue rewinding while held
     rewindIntervalRef.current = setInterval(() => {
-      setCurrentIndex(prev => {
+      setCurrentIndex((prev) => {
         if (prev <= 0) {
           if (rewindIntervalRef.current) {
             clearInterval(rewindIntervalRef.current)
@@ -246,13 +266,13 @@ export function RSVPReader() {
   const skipBackward = () => {
     // Don't skip if any dialog is open
     if (settingsOpen || showKeyboardHelp) return
-    setCurrentIndex(prev => Math.max(0, prev - 1))
+    setCurrentIndex((prev) => Math.max(0, prev - 1))
   }
 
   const skipForward = () => {
     // Don't skip if any dialog is open
     if (settingsOpen || showKeyboardHelp) return
-    setCurrentIndex(prev => Math.min(words.length - 1, prev + 1))
+    setCurrentIndex((prev) => Math.min(words.length - 1, prev + 1))
   }
 
   const handleRestartWrapper = () => {
@@ -300,14 +320,17 @@ export function RSVPReader() {
     const orpIndex = getORPIndex(currentWord)
     return (
       <>
-        <span className="text-muted-foreground">{currentWord.slice(0, orpIndex)}</span>
+        <span className="text-muted-foreground">
+          {currentWord.slice(0, orpIndex)}
+        </span>
         <span className="text-primary">{currentWord[orpIndex]}</span>
         <span>{currentWord.slice(orpIndex + 1)}</span>
       </>
     )
   }
 
-  const progress = words.length > 0 ? ((currentIndex / words.length) * 100).toFixed(0) : 0
+  const progress =
+    words.length > 0 ? ((currentIndex / words.length) * 100).toFixed(0) : 0
   const isFinished = currentIndex >= words.length - 1 && words.length > 0
 
   return (
@@ -331,31 +354,45 @@ export function RSVPReader() {
             <div className="space-y-3 py-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Hold to read</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">Space</kbd>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
+                  Space
+                </kbd>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Previous word</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">←</kbd>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
+                  ←
+                </kbd>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Next word</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">→</kbd>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
+                  →
+                </kbd>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Restart from beginning</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">R</kbd>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
+                  R
+                </kbd>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Open settings</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">S</kbd>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
+                  S
+                </kbd>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Keyboard shortcuts help</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">K</kbd>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
+                  K
+                </kbd>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Stop reading</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">Esc</kbd>
+                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
+                  Esc
+                </kbd>
               </div>
             </div>
           </DialogContent>
@@ -377,9 +414,7 @@ export function RSVPReader() {
             </DialogHeader>
             <div className="space-y-6 py-4">
               <div className="space-y-2">
-                <Label htmlFor="wpm">
-                  Reading Speed: {wpm} WPM
-                </Label>
+                <Label htmlFor="wpm">Reading Speed: {wpm} WPM</Label>
                 <Slider
                   id="wpm"
                   min={100}
@@ -394,9 +429,7 @@ export function RSVPReader() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="font-size">
-                  Font Size: {fontSize}px
-                </Label>
+                <Label htmlFor="font-size">Font Size: {fontSize}px</Label>
                 <Slider
                   id="font-size"
                   min={24}
@@ -478,10 +511,14 @@ export function RSVPReader() {
               {/* Main word display */}
               <div className="min-h-[120px] flex items-center justify-center">
                 <p
-                  className={`font-bold tracking-tight ${useAnimation ? 'animate-in fade-in zoom-in-50' : ''}`}
+                  className={`font-bold tracking-tight ${
+                    useAnimation ? "animate-in fade-in zoom-in-50" : ""
+                  }`}
                   style={{
                     fontSize: `${fontSize}px`,
-                    animationDuration: useAnimation ? `${animationDuration}ms` : undefined
+                    animationDuration: useAnimation
+                      ? `${animationDuration}ms`
+                      : undefined,
                   }}
                   key={currentIndex}
                 >
@@ -517,27 +554,39 @@ export function RSVPReader() {
               <div className="h-10 flex items-center justify-center mt-8">
                 {!isReading && (
                   <div
-                    className="flex gap-2 justify-center"
+                    className="flex gap-3 justify-center"
                     onPointerDown={(e) => e.stopPropagation()}
                     onPointerUp={(e) => e.stopPropagation()}
                   >
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="lg"
                       disabled={currentIndex === 0}
                       onPointerDown={handleRewindStart}
                       onPointerUp={handleRewindStop}
                       onPointerLeave={handleRewindStop}
+                      className="size-14"
                     >
-                      <Rewind className="h-5 w-5" />
+                      <Rewind className="size-6" />
                       <span className="sr-only">Rewind</span>
                     </Button>
-                    <Button onClick={handleRestart} variant="ghost" size="icon" disabled={currentIndex === 0}>
-                      <RotateCcw className="h-5 w-5" />
+                    <Button
+                      onClick={handleRestart}
+                      variant="ghost"
+                      size="lg"
+                      disabled={currentIndex === 0}
+                      className="size-14"
+                    >
+                      <RotateCcw className="size-6" />
                       <span className="sr-only">Restart</span>
                     </Button>
-                    <Button onClick={handleClearText} variant="ghost" size="icon">
-                      <X className="h-5 w-5" />
+                    <Button
+                      onClick={handleClearText}
+                      variant="ghost"
+                      size="lg"
+                      className="size-14"
+                    >
+                      <X className="size-6" />
                       <span className="sr-only">Clear text</span>
                     </Button>
                   </div>
@@ -552,7 +601,11 @@ export function RSVPReader() {
       {!isReading && hasText && (
         <div className="fixed bottom-0 left-0 right-0 p-4 text-center">
           <p className="text-xs text-muted-foreground">
-            Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-xs font-mono">K</kbd> for keyboard shortcuts
+            Press{" "}
+            <kbd className="px-1.5 py-0.5 bg-secondary rounded text-xs font-mono">
+              K
+            </kbd>{" "}
+            for keyboard shortcuts
           </p>
         </div>
       )}
