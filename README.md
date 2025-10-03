@@ -1,36 +1,161 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Touch to Read
 
-## Getting Started
+A modern RSVP (Rapid Serial Visual Presentation) speed reading app built with Next.js 15, featuring an innovative touch-to-read interface.
 
-First, run the development server:
+## 🚀 Features
+
+### Core Reading Experience
+- **Touch-to-Read**: Hold anywhere on the screen to read, release to pause
+- **RSVP Technology**: Words appear one at a time at a fixed position for faster reading
+- **Smart Pacing**: Automatic delays for punctuation and word length
+- **ORP Highlighting**: Optimal Recognition Point highlighting for improved focus
+- **Progress Tracking**: Visual progress bar and word counter
+
+### Customization
+- **Adjustable Speed**: 100-1000 WPM (words per minute)
+- **Font Size Control**: 24-120px customizable font size
+- **Smart Punctuation Pauses**: Longer pauses at sentence endings, commas, etc.
+- **Dark/Light Theme**: System-aware theme switching
+
+### Text Input Options
+- **Paste Text**: Simple textarea for copying and pasting
+- **File Upload**: Upload .txt and .md files
+- **Sample Texts**: Pre-loaded articles for instant reading
+- **Future**: URL extraction (coming soon)
+
+### Keyboard Shortcuts
+- `Space` - Play/Pause reading
+- `←` - Previous word
+- `→` - Next word
+- `R` - Restart from beginning
+- `S` - Open settings
+- `Esc` - Stop reading
+
+### Persistence
+- **Auto-save Settings**: Your preferences are remembered
+- **Reading Progress**: Resume where you left off
+- **Local Storage**: All data stays on your device
+
+## 🎯 What is RSVP?
+
+RSVP (Rapid Serial Visual Presentation) is a speed reading technique that displays text one word at a time at a fixed position. This eliminates:
+- Eye movement (saccades) across the page
+- Regression (re-reading)
+- Subvocalization (inner voice)
+
+By removing these barriers, most people can read 2-3x faster while maintaining comprehension.
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **UI Components**: shadcn/ui + Radix UI
+- **Styling**: Tailwind CSS v4
+- **Theme**: next-themes
+- **Language**: TypeScript
+- **Icons**: Lucide React
+
+## 📦 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- npm or pnpm
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/touch-to-read.git
+cd touch-to-read
+
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## 🎨 Usage Tips
 
-To learn more about Next.js, take a look at the following resources:
+### Finding Your Optimal Speed
+1. Start at 300 WPM (the default)
+2. If you're comfortable, increase by 50 WPM increments
+3. If you lose comprehension, decrease speed
+4. Most people find their sweet spot between 250-500 WPM
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Maximizing Comprehension
+- Enable **Smart Punctuation Pauses** for natural reading rhythm
+- Use **ORP Highlighting** to help your eyes focus
+- Take breaks every 15-20 minutes
+- Start with familiar content to build speed
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Touch-to-Read Benefits
+- **Active Control**: You decide when to read vs. reflect
+- **No Accidental Advancement**: Text only moves when you hold
+- **Natural Flow**: Release to think, hold to continue
+- **Works on Mobile**: Touch or click - both work perfectly
 
-## Deploy on Vercel
+## 📁 Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+touch-to-read/
+├── app/                    # Next.js app directory
+│   ├── layout.tsx         # Root layout with theme provider
+│   ├── page.tsx           # Main page
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── rsvp-reader.tsx   # Main reading component
+│   ├── text-input-dialog.tsx  # Text input UI
+│   ├── theme-toggle.tsx   # Theme switcher
+│   └── ui/               # shadcn/ui components
+├── hooks/                # Custom React hooks
+│   └── use-keyboard-shortcuts.ts
+├── lib/                  # Utilities
+│   ├── storage.ts       # LocalStorage helpers
+│   └── utils.ts         # General utilities
+└── TODO.md              # Development roadmap
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔜 Roadmap
+
+See [TODO.md](TODO.md) for the complete development roadmap.
+
+### Coming Soon
+- [ ] URL text extraction
+- [ ] Reading statistics dashboard
+- [ ] Multiple reading modes (chunk, sentence)
+- [ ] PDF and EPUB support
+- [ ] Export reading data
+- [ ] PWA support for offline reading
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Guidelines
+- Follow the existing code style
+- Add TypeScript types for all new code
+- Test on both desktop and mobile
+- Update documentation for new features
+
+## 📄 License
+
+MIT License - feel free to use this project for personal or commercial purposes.
+
+## 🙏 Acknowledgments
+
+- Inspired by speed reading research and RSVP technology
+- Built with amazing open-source tools from the React ecosystem
+- UI components from [shadcn/ui](https://ui.shadcn.com/)
+
+---
+
+**Made with ❤️ for better reading**
