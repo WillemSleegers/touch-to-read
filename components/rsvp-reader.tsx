@@ -382,7 +382,7 @@ export function RSVPReader() {
   const isFinished = currentIndex >= words.length - 1 && words.length > 0
 
   return (
-    <div className="h-dvh flex flex-col relative overflow-hidden overscroll-none">
+    <div className="h-dvh flex flex-col relative overflow-hidden">
       {/* Header */}
       <div className="fixed top-0 right-0 p-4 flex gap-2 z-10">
         <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
