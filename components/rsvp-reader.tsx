@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Settings, RotateCcw, Keyboard, Rewind, X } from "lucide-react"
+import { Settings, RotateCcw, Keyboard, Rewind } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,33 +17,76 @@ import { Switch } from "@/components/ui/switch"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { TextInputDialog } from "@/components/text-input-dialog"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
+import { loadSettings, saveSettings } from "@/lib/storage"
 import {
-  loadSettings,
-  saveSettings,
-  loadCurrentText,
-  saveCurrentText,
-} from "@/lib/storage"
+  DEFAULT_TEXT,
+  DEFAULT_WPM,
+  SENTENCE_END_DELAY,
+  COMMA_DELAY,
+  LONG_WORD_DELAY,
+  VERY_LONG_WORD_DELAY,
+  SHORT_WORD_DELAY,
+  LONG_WORD_THRESHOLD,
+  VERY_LONG_WORD_THRESHOLD,
+  SHORT_WORD_THRESHOLD,
+} from "@/lib/constants"
 
 interface ProcessedWord {
   text: string
   delay: number // milliseconds
 }
 
+const getInitialWords = (): ProcessedWord[] => {
+  const baseDelay = 60000 / DEFAULT_WPM
+  const rawWords = DEFAULT_TEXT.split(/\s+/).filter((word) => word.length > 0)
+
+  return rawWords.map((word) => {
+    let delay = baseDelay
+
+    // Add delay for punctuation
+    if (word.match(/[.!?]$/)) {
+      delay *= SENTENCE_END_DELAY
+    } else if (word.match(/[,;:]$/)) {
+      delay *= COMMA_DELAY
+    }
+
+    // Adjust for word length
+    if (word.length > LONG_WORD_THRESHOLD) {
+      delay *= LONG_WORD_DELAY
+    } else if (word.length > VERY_LONG_WORD_THRESHOLD) {
+      delay *= VERY_LONG_WORD_DELAY
+    }
+
+    if (word.length <= SHORT_WORD_THRESHOLD) {
+      delay *= SHORT_WORD_DELAY
+    }
+
+    return {
+      text: word,
+      delay: Math.round(delay),
+    }
+  })
+}
+
 export function RSVPReader() {
-  const [wpm, setWpm] = useState(300)
+  const [wpm, setWpm] = useState(DEFAULT_WPM)
   const [fontSize, setFontSize] = useState(60)
   const [showORP, setShowORP] = useState(true)
   const [usePunctuation, setUsePunctuation] = useState(true)
   const [useAnimation, setUseAnimation] = useState(true)
-  const [showProgress, setShowProgress] = useState(true)
-  const [words, setWords] = useState<ProcessedWord[]>([])
+  const [showProgress, setShowProgress] = useState(false)
+  const [words, setWords] = useState<ProcessedWord[]>(getInitialWords)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isReading, setIsReading] = useState(false)
-  const [hasText, setHasText] = useState(false)
+  const [hasText, setHasText] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
+  const [timeProgress, setTimeProgress] = useState(0)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const rewindIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const readingStartTimeRef = useRef<number>(0)
+  const hasStartedReadingRef = useRef(false)
 
   const baseDelay = 60000 / wpm
   // Animation should be fast enough to not interfere with reading (max 25% of base delay)
@@ -60,21 +103,21 @@ export function RSVPReader() {
         if (usePunctuation) {
           // Add delay for punctuation
           if (word.match(/[.!?]$/)) {
-            delay *= 2.5 // Longer pause for sentence endings
+            delay *= SENTENCE_END_DELAY
           } else if (word.match(/[,;:]$/)) {
-            delay *= 1.5 // Medium pause for commas and semicolons
+            delay *= COMMA_DELAY
           }
 
-          // Adjust for word length (longer words need more time)
-          if (word.length > 8) {
-            delay *= 1.3
-          } else if (word.length > 12) {
-            delay *= 1.5
+          // Adjust for word length
+          if (word.length > LONG_WORD_THRESHOLD) {
+            delay *= LONG_WORD_DELAY
+          } else if (word.length > VERY_LONG_WORD_THRESHOLD) {
+            delay *= VERY_LONG_WORD_DELAY
           }
 
           // Short words can be faster
-          if (word.length <= 3) {
-            delay *= 0.8
+          if (word.length <= SHORT_WORD_THRESHOLD) {
+            delay *= SHORT_WORD_DELAY
           }
         }
 
@@ -89,6 +132,11 @@ export function RSVPReader() {
     [baseDelay, usePunctuation]
   )
 
+  // Calculate total reading time for all words
+  const getTotalReadingTime = useCallback((wordList: ProcessedWord[]) => {
+    return wordList.reduce((total, word) => total + word.delay, 0)
+  }, [])
+
   const handleTextSubmit = useCallback(
     (text: string) => {
       const processed = processText(text)
@@ -96,11 +144,12 @@ export function RSVPReader() {
       setCurrentIndex(0)
       setIsReading(false)
       setHasText(true)
+      setTimeProgress(0)
     },
     [processText]
   )
 
-  // Load saved settings and text on mount - only runs once
+  // Load saved settings on mount - only runs once
   const initializedRef = useRef(false)
   useEffect(() => {
     // Prevent double initialization in StrictMode
@@ -120,20 +169,7 @@ export function RSVPReader() {
         setShowProgress(settings.showProgress)
       }
     }
-
-    const savedText = loadCurrentText()
-    const textToLoad = savedText?.content || `Welcome to Touch to Read! This is an RSVP speed reading app. Touch and hold anywhere on the screen to start reading. Release to pause. The longer you hold, the more you read. It's that simple. Try adjusting the speed in settings to find your perfect pace. Happy reading!`
-
-    handleTextSubmit(textToLoad)
-
-    if (savedText && savedText.progress > 0) {
-      setTimeout(() => {
-        setCurrentIndex(
-          Math.round((savedText.progress / 100) * textToLoad.split(/\s+/).filter(w => w.length > 0).length)
-        )
-      }, 0)
-    }
-  }, [handleTextSubmit])
+  }, [])
 
   // Save settings when they change
   useEffect(() => {
@@ -147,34 +183,23 @@ export function RSVPReader() {
     })
   }, [wpm, fontSize, showORP, usePunctuation, useAnimation, showProgress])
 
-  // Save reading progress periodically
-  useEffect(() => {
-    if (hasText && words.length > 0) {
-      const progress = (currentIndex / words.length) * 100
-      const text = words.map((w) => w.text).join(" ")
-      saveCurrentText({
-        id: "current",
-        content: text,
-        createdAt: Date.now(),
-        lastReadAt: Date.now(),
-        progress,
-      })
-    }
-  }, [currentIndex, words, hasText])
-
   // Reading loop with dynamic delays
   useEffect(() => {
-    if (isReading && currentIndex < words.length) {
-      const currentWord = words[currentIndex]
-      intervalRef.current = setTimeout(() => {
-        setCurrentIndex((prev) => {
-          if (prev >= words.length - 1) {
-            setIsReading(false)
-            return prev
-          }
-          return prev + 1
-        })
-      }, currentWord.delay)
+    if (isReading) {
+      hasStartedReadingRef.current = true
+
+      if (currentIndex < words.length) {
+        const currentWord = words[currentIndex]
+        intervalRef.current = setTimeout(() => {
+          setCurrentIndex((prev) => {
+            if (prev >= words.length - 1) {
+              setIsReading(false)
+              return prev
+            }
+            return prev + 1
+          })
+        }, currentWord.delay)
+      }
     } else {
       if (intervalRef.current) {
         clearTimeout(intervalRef.current)
@@ -188,6 +213,42 @@ export function RSVPReader() {
       }
     }
   }, [isReading, currentIndex, words])
+
+  // Time-based progress bar that updates smoothly
+  useEffect(() => {
+    if (isReading && words.length > 0) {
+      // Calculate elapsed time from words we've already read
+      const elapsedTime = words.slice(0, currentIndex).reduce((total, word) => total + word.delay, 0)
+      const totalTime = getTotalReadingTime(words)
+
+      readingStartTimeRef.current = Date.now() - elapsedTime
+
+      // Update progress smoothly every 50ms
+      progressIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - readingStartTimeRef.current
+        const progress = Math.min(100, (elapsed / totalTime) * 100)
+        setTimeProgress(progress)
+      }, 50)
+    } else {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
+
+      // When paused, set progress to current word position
+      if (words.length > 0) {
+        const elapsed = words.slice(0, currentIndex + 1).reduce((total, word) => total + word.delay, 0)
+        const totalTime = getTotalReadingTime(words)
+        setTimeProgress((elapsed / totalTime) * 100)
+      }
+    }
+
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+      }
+    }
+  }, [isReading, currentIndex, words, getTotalReadingTime])
 
   // Update words when settings change (but not when words themselves change)
   const prevSettingsRef = useRef({ baseDelay, usePunctuation })
@@ -222,6 +283,7 @@ export function RSVPReader() {
   const handleRestart = () => {
     setCurrentIndex(0)
     setIsReading(false)
+    setTimeProgress(0)
   }
 
   const handleRewindStart = () => {
@@ -248,13 +310,6 @@ export function RSVPReader() {
       clearInterval(rewindIntervalRef.current)
       rewindIntervalRef.current = null
     }
-  }
-
-  const handleClearText = () => {
-    setWords([])
-    setCurrentIndex(0)
-    setIsReading(false)
-    setHasText(false)
   }
 
   const handleSpaceDown = () => {
@@ -324,8 +379,6 @@ export function RSVPReader() {
     )
   }
 
-  const progress =
-    words.length > 0 ? ((currentIndex / words.length) * 100).toFixed(0) : 0
   const isFinished = currentIndex >= words.length - 1 && words.length > 0
 
   return (
@@ -480,32 +533,23 @@ export function RSVPReader() {
 
       {/* Main reading area */}
       <div
-        className={`flex-1 flex items-center justify-center select-none ${hasText && !isFinished ? 'cursor-pointer' : ''}`}
-        onPointerDown={hasText && !isFinished ? handlePointerDown : undefined}
-        onPointerUp={hasText && !isFinished ? handlePointerUp : undefined}
-        onPointerLeave={hasText && !isFinished ? handlePointerLeave : undefined}
-        onContextMenu={(e) => hasText && e.preventDefault()}
+        className={`flex-1 flex items-center justify-center select-none ${!isFinished ? 'cursor-pointer' : ''}`}
+        onPointerDown={!isFinished ? handlePointerDown : undefined}
+        onPointerUp={!isFinished ? handlePointerUp : undefined}
+        onPointerLeave={!isFinished ? handlePointerLeave : undefined}
+        onContextMenu={(e) => e.preventDefault()}
       >
-        {!hasText ? (
-          <div className="text-center space-y-6">
-            <h1 className="text-4xl font-bold">Touch to Read</h1>
-            <p className="text-muted-foreground max-w-md">
-              Load text to start speed reading
-            </p>
-            <TextInputDialog onTextSubmit={handleTextSubmit} />
-          </div>
-        ) : (
-          <div className="w-full h-full flex flex-col justify-center">
+        <div className="w-full h-full flex flex-col justify-center">
             <div className="text-center w-full px-4">
               {/* Main word display */}
               <div className="min-h-[120px] flex items-center justify-center">
                 <p
                   className={`font-bold tracking-tight ${
-                    useAnimation ? "animate-in fade-in zoom-in-50" : ""
+                    useAnimation && hasStartedReadingRef.current ? "animate-in fade-in zoom-in-50" : ""
                   }`}
                   style={{
                     fontSize: `${fontSize}px`,
-                    animationDuration: useAnimation
+                    animationDuration: useAnimation && hasStartedReadingRef.current
                       ? `${animationDuration}ms`
                       : undefined,
                   }}
@@ -524,20 +568,28 @@ export function RSVPReader() {
                 )}
               </div>
 
-              {/* Progress bar */}
-              {showProgress && (
-                <div className="space-y-2 mt-8">
-                  <div className="text-sm text-muted-foreground">
-                    {currentIndex + 1} / {words.length} ({progress}%)
-                  </div>
-                  <div className="max-w-md mx-auto h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all duration-200"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
+              {/* Progress bar - always reserve space to prevent layout shift */}
+              <div className="space-y-2 mt-8">
+                <div className="text-sm text-muted-foreground h-5">
+                  {showProgress && (
+                    <>
+                      {currentIndex + 1} / {words.length} ({timeProgress.toFixed(0)}%)
+                    </>
+                  )}
                 </div>
-              )}
+                <div className="max-w-md mx-auto h-2">
+                  {showProgress && (
+                    <div className="h-full bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-[width] duration-100 ease-linear"
+                        style={{
+                          width: `${timeProgress}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Bottom controls - Rewind, Restart, and Clear */}
               <div className="h-10 flex items-center justify-center mt-8">
@@ -569,25 +621,16 @@ export function RSVPReader() {
                       <RotateCcw className="size-6" />
                       <span className="sr-only">Restart</span>
                     </Button>
-                    <Button
-                      onClick={handleClearText}
-                      variant="ghost"
-                      size="lg"
-                      className="size-14"
-                    >
-                      <X className="size-6" />
-                      <span className="sr-only">Clear text</span>
-                    </Button>
+                    <TextInputDialog onTextSubmit={handleTextSubmit} />
                   </div>
                 )}
               </div>
             </div>
           </div>
-        )}
       </div>
 
       {/* Footer - only show when not reading */}
-      {!isReading && hasText && (
+      {!isReading && (
         <div className="fixed bottom-0 left-0 right-0 p-4 text-center">
           <p className="text-xs text-muted-foreground">
             Press{" "}

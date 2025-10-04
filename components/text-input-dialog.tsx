@@ -14,25 +14,11 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { SAMPLE_TEXTS } from "@/lib/constants"
 
 interface TextInputDialogProps {
   onTextSubmit: (text: string) => void
 }
-
-const SAMPLE_TEXTS = [
-  {
-    title: "The Art of Reading",
-    text: `Speed reading is not just about reading faster. It's about understanding more efficiently. The human brain can process visual information incredibly quickly, much faster than we typically read. Traditional reading involves moving your eyes across the page, which creates unnecessary delays. RSVP technology eliminates this by presenting words at a fixed point, allowing your brain to focus purely on comprehension. Studies show that most people can comfortably read at 300-500 words per minute with this method, with practice reaching 700 WPM or more while maintaining good comprehension.`,
-  },
-  {
-    title: "The Power of Focus",
-    text: `In our modern world, the ability to focus has become increasingly rare and valuable. Every notification, every alert, every ping competes for our attention. But deep work, the kind that produces real value, requires sustained concentration. When you eliminate distractions and give your full attention to a single task, remarkable things happen. Your comprehension deepens. Your creativity flourishes. Your productivity soars. This is why touch-to-read is so powerful. By requiring physical engagement, it transforms passive reading into an active choice. You decide when to focus, when to pause, when to reflect.`,
-  },
-  {
-    title: "The Science of Learning",
-    text: `Learning is not a passive process. It requires active engagement with material. When you read at an accelerated pace, your brain enters a state of heightened focus. There's no time for mind-wandering or distraction. Each word demands attention. This forced concentration can actually improve retention for many readers. The key is finding your optimal speed, fast enough to maintain focus but not so fast that comprehension suffers. Everyone's sweet spot is different. Experiment with different speeds and see what works best for you.`,
-  },
-]
 
 export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
   const [open, setOpen] = useState(false)
@@ -106,8 +92,9 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="lg">
-          Load Text
+        <Button variant="ghost" size="lg" className="size-14">
+          <FileText className="size-6" />
+          <span className="sr-only">Load Text</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">
@@ -233,12 +220,14 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
 
             {activeTab === "file" && (
               <div className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Label htmlFor="file-upload">Upload a text file</Label>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => document.getElementById('file-upload')?.click()}
+                      onClick={() =>
+                        document.getElementById("file-upload")?.click()
+                      }
                       className="gap-2"
                       type="button"
                     >
@@ -246,7 +235,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                       Choose File
                     </Button>
                     <span className="text-sm text-muted-foreground">
-                      {selectedFileName || 'No file chosen'}
+                      {selectedFileName || "No file chosen"}
                     </span>
                   </div>
                   <Input
