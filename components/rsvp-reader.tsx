@@ -100,8 +100,13 @@ export function RSVPReader() {
     [processText]
   )
 
-  // Load saved settings and text on mount
+  // Load saved settings and text on mount - only runs once
+  const initializedRef = useRef(false)
   useEffect(() => {
+    // Prevent double initialization in StrictMode
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     const settings = loadSettings()
     if (settings) {
       setWpm(settings.wpm)
@@ -117,22 +122,18 @@ export function RSVPReader() {
     }
 
     const savedText = loadCurrentText()
-    if (savedText) {
-      handleTextSubmit(savedText.content)
-      // Note: Progress will be restored after words are processed
+    const textToLoad = savedText?.content || `Welcome to Touch to Read! This is an RSVP speed reading app. Touch and hold anywhere on the screen to start reading. Release to pause. The longer you hold, the more you read. It's that simple. Try adjusting the speed in settings to find your perfect pace. Happy reading!`
+
+    handleTextSubmit(textToLoad)
+
+    if (savedText && savedText.progress > 0) {
       setTimeout(() => {
         setCurrentIndex(
-          Math.round(
-            (savedText.progress / 100) * savedText.content.split(/\s+/).length
-          )
+          Math.round((savedText.progress / 100) * textToLoad.split(/\s+/).filter(w => w.length > 0).length)
         )
       }, 0)
-    } else {
-      const defaultText = `Welcome to Touch to Read! This is an RSVP speed reading app. Touch and hold anywhere on the screen to start reading. Release to pause. The longer you hold, the more you read. It's that simple. Try adjusting the speed in settings to find your perfect pace. Happy reading!`
-      handleTextSubmit(defaultText)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [handleTextSubmit])
 
   // Save settings when they change
   useEffect(() => {
@@ -188,15 +189,21 @@ export function RSVPReader() {
     }
   }, [isReading, currentIndex, words])
 
-  // Update words when settings change
+  // Update words when settings change (but not when words themselves change)
+  const prevSettingsRef = useRef({ baseDelay, usePunctuation })
   useEffect(() => {
-    if (words.length > 0) {
+    const prevSettings = prevSettingsRef.current
+    const settingsChanged =
+      prevSettings.baseDelay !== baseDelay ||
+      prevSettings.usePunctuation !== usePunctuation
+
+    if (settingsChanged && words.length > 0) {
       const rawText = words.map((w) => w.text).join(" ")
       const processed = processText(rawText)
       setWords(processed)
+      prevSettingsRef.current = { baseDelay, usePunctuation }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseDelay, usePunctuation])
+  }, [baseDelay, usePunctuation, words, processText])
 
   const handlePointerDown = () => {
     if (hasText && currentIndex < words.length) {
@@ -281,17 +288,6 @@ export function RSVPReader() {
     handleRestart()
   }
 
-  const handleEscapeWrapper = () => {
-    // If a dialog is open, close it; otherwise stop reading
-    if (settingsOpen) {
-      setSettingsOpen(false)
-    } else if (showKeyboardHelp) {
-      setShowKeyboardHelp(false)
-    } else {
-      setIsReading(false)
-    }
-  }
-
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onSpaceDown: handleSpaceDown,
@@ -301,7 +297,6 @@ export function RSVPReader() {
     onRestart: handleRestartWrapper,
     onSettings: () => setSettingsOpen(true),
     onKeyboard: () => setShowKeyboardHelp(true),
-    onEscape: handleEscapeWrapper,
   })
 
   const currentWord = words[currentIndex]?.text || ""
@@ -386,12 +381,6 @@ export function RSVPReader() {
                 <span className="text-sm">Keyboard shortcuts help</span>
                 <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
                   K
-                </kbd>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Stop reading</span>
-                <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">
-                  Esc
                 </kbd>
               </div>
             </div>
@@ -491,7 +480,7 @@ export function RSVPReader() {
 
       {/* Main reading area */}
       <div
-        className="flex-1 flex items-center justify-center cursor-pointer select-none"
+        className={`flex-1 flex items-center justify-center select-none ${hasText && !isFinished ? 'cursor-pointer' : ''}`}
         onPointerDown={hasText && !isFinished ? handlePointerDown : undefined}
         onPointerUp={hasText && !isFinished ? handlePointerUp : undefined}
         onPointerLeave={hasText && !isFinished ? handlePointerLeave : undefined}
@@ -501,7 +490,7 @@ export function RSVPReader() {
           <div className="text-center space-y-6">
             <h1 className="text-4xl font-bold">Touch to Read</h1>
             <p className="text-muted-foreground max-w-md">
-              Load text to start speed reading with RSVP technology
+              Load text to start speed reading
             </p>
             <TextInputDialog onTextSubmit={handleTextSubmit} />
           </div>

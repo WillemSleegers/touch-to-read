@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 interface TextInputDialogProps {
   onTextSubmit: (text: string) => void
@@ -35,15 +36,19 @@ const SAMPLE_TEXTS = [
 
 export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
   const [open, setOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<"paste" | "file" | "url" | "sample">("paste")
+  const [activeTab, setActiveTab] = useState<
+    "paste" | "file" | "url" | "sample"
+  >("paste")
   const [text, setText] = useState("")
   const [selectedSample, setSelectedSample] = useState<string>("")
   const [url, setUrl] = useState("")
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractError, setExtractError] = useState("")
+  const [selectedFileName, setSelectedFileName] = useState<string>("")
 
   const handleSubmit = () => {
-    const finalText = activeTab === "sample" && selectedSample ? selectedSample : text
+    const finalText =
+      activeTab === "sample" && selectedSample ? selectedSample : text
     if (finalText.trim()) {
       onTextSubmit(finalText.trim())
       setOpen(false)
@@ -55,6 +60,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setSelectedFileName(file.name)
       const reader = new FileReader()
       reader.onload = (event) => {
         const content = event.target?.result as string
@@ -75,23 +81,23 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
     setExtractError("")
 
     try {
-      const response = await fetch('/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() })
+      const response = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim() }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        setExtractError(data.error || 'Failed to extract text')
+        setExtractError(data.error || "Failed to extract text")
         return
       }
 
       setText(data.content)
       setExtractError("")
     } catch {
-      setExtractError('Network error. Please check your connection.')
+      setExtractError("Network error. Please check your connection.")
     } finally {
       setIsExtracting(false)
     }
@@ -156,7 +162,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
           {/* Content */}
           <div className="space-y-4 min-h-[400px]">
             {activeTab === "paste" && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label htmlFor="text-input">Paste your text here</Label>
                 <Textarea
                   id="text-input"
@@ -167,14 +173,14 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                   className="resize-none"
                 />
                 <p className="text-sm text-muted-foreground">
-                  {text.split(/\s+/).filter(w => w.length > 0).length} words
+                  {text.split(/\s+/).filter((w) => w.length > 0).length} words
                 </p>
               </div>
             )}
 
             {activeTab === "url" && (
               <div className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Label htmlFor="url-input">Enter article URL</Label>
                   <div className="flex gap-2">
                     <input
@@ -196,7 +202,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                           Extracting...
                         </>
                       ) : (
-                        'Extract'
+                        "Extract"
                       )}
                     </Button>
                   </div>
@@ -217,7 +223,8 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                       className="resize-none"
                     />
                     <p className="text-sm text-muted-foreground">
-                      {text.split(/\s+/).filter(w => w.length > 0).length} words
+                      {text.split(/\s+/).filter((w) => w.length > 0).length}{" "}
+                      words
                     </p>
                   </div>
                 )}
@@ -228,18 +235,26 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="file-upload">Upload a text file</Label>
-                  <input
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                      className="gap-2"
+                      type="button"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Choose File
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedFileName || 'No file chosen'}
+                    </span>
+                  </div>
+                  <Input
                     id="file-upload"
                     type="file"
                     accept=".txt,.md"
                     onChange={handleFileUpload}
-                    className="block w-full text-sm text-muted-foreground
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-md file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-secondary file:text-secondary-foreground
-                      hover:file:bg-secondary/80
-                      cursor-pointer"
+                    className="hidden"
                   />
                   <p className="text-sm text-muted-foreground">
                     Supports .txt and .md files
@@ -255,7 +270,8 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                       className="resize-none"
                     />
                     <p className="text-sm text-muted-foreground">
-                      {text.split(/\s+/).filter(w => w.length > 0).length} words
+                      {text.split(/\s+/).filter((w) => w.length > 0).length}{" "}
+                      words
                     </p>
                   </div>
                 )}
@@ -263,7 +279,7 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
             )}
 
             {activeTab === "sample" && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Label>Choose a sample text</Label>
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {SAMPLE_TEXTS.map((sample, index) => (
@@ -272,8 +288,8 @@ export function TextInputDialog({ onTextSubmit }: TextInputDialogProps) {
                       onClick={() => handleSampleSelect(sample.text)}
                       className={`w-full text-left p-3 rounded-md border transition-colors ${
                         selectedSample === sample.text
-                          ? 'bg-secondary border-primary'
-                          : 'hover:bg-secondary/50'
+                          ? "bg-secondary border-primary"
+                          : "hover:bg-secondary/50"
                       }`}
                     >
                       <div className="font-semibold">{sample.title}</div>

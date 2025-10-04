@@ -8,7 +8,6 @@ export interface KeyboardShortcuts {
   onRestart?: () => void
   onSettings?: () => void
   onKeyboard?: () => void
-  onEscape?: () => void
 }
 
 export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
@@ -55,10 +54,6 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
         case 'K':
           e.preventDefault()
           shortcuts.onKeyboard?.()
-          break
-        case 'Escape':
-          e.preventDefault()
-          shortcuts.onEscape?.()
           break
       }
     }
