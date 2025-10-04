@@ -629,18 +629,6 @@ export function RSVPReader() {
           </div>
       </div>
 
-      {/* Footer - only show when not reading */}
-      {!isReading && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            Press{" "}
-            <kbd className="px-1.5 py-0.5 bg-secondary rounded text-xs font-mono">
-              K
-            </kbd>{" "}
-            for keyboard shortcuts
-          </p>
-        </div>
-      )}
     </div>
   )
 }
