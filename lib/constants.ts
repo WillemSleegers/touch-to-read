@@ -24,6 +24,17 @@ export const LONG_WORD_THRESHOLD = 8
 export const VERY_LONG_WORD_THRESHOLD = 12
 export const SHORT_WORD_THRESHOLD = 3
 
+// Animation and timing
+export const MAX_ANIMATION_DURATION = 150
+export const ANIMATION_DELAY_RATIO = 0.25
+export const REWIND_INTERVAL = 100
+export const PROGRESS_UPDATE_INTERVAL = 50
+
+// ORP (Optimal Recognition Point) thresholds
+export const ORP_SHORT_THRESHOLD = 1
+export const ORP_MEDIUM_THRESHOLD = 5
+export const ORP_LONG_THRESHOLD = 9
+
 // Default welcome text
 export const DEFAULT_TEXT = `Welcome to Touch to Read! This is an RSVP speed reading app. Touch and hold anywhere on the screen to start reading. Release to pause. The longer you hold, the more you read. It's that simple. Try adjusting the speed in settings to find your perfect pace. Happy reading!`
 
