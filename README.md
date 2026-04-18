@@ -2,8 +2,6 @@
 
 A speed reading app using RSVP (Rapid Serial Visual Presentation). Words are displayed one at a time at a fixed point — touch and hold to read, release to pause.
 
-Built with [Claude Code](https://claude.com/claude-code).
-
 ## Features
 
 - **Touch-to-read interaction** — hold anywhere on screen to read, release to pause
